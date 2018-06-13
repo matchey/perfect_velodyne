@@ -9,7 +9,6 @@
 //
 
 #include <ros/ros.h>
-#include <pcl/common/pca.h>
 #include "perfect_velodyne/normal_estimation.h"
 
 using namespace std;
@@ -171,7 +170,7 @@ namespace perfect_velodyne
 					intensity = (intensity < min_intensity) ? min_intensity : intensity;
 					intensity = (intensity > max_intensity) ? max_intensity : intensity;
 
-					// if (pointInRange(distance)) {
+					if (pointInRange(distance)) {
 
 						// convert polar coordinates to Euclidean XYZ
 						VPointNormal point;
@@ -184,7 +183,7 @@ namespace perfect_velodyne
 						// append this point to the cloud
 						pc.points.push_back(point);
 						++pc.width;
-					// }
+					}
 				}
 			}
 		}
@@ -197,7 +196,7 @@ namespace perfect_velodyne
 	// 	return (range >= min_range
 	// 	        && range <= max_range);
 	// }
-	void NormalEstimator::normalSetter()
+	void NormalEstimator::pca()
 	{
 	}
 

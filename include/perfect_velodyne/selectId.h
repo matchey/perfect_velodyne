@@ -22,7 +22,7 @@ namespace perfect_velodyne
 	typedef PointXYZIRNormal VPointNormal;
 	typedef pcl::PointCloud<VPointNormal> VPointCloudNormal;
 
-	class NormalEstimator : public velodyne_rawdata::RawData
+	class IndexSelector : public velodyne_rawdata::RawData
 	{
 		int num_vertical; // vertical num for PCA
 		int num_horizontal; // horizontal num for PCA
@@ -53,13 +53,13 @@ namespace perfect_velodyne
 		/** in-line test whether a point is in range */
 		bool pointInRange(float range)
 		{
-			return (range >= config_.min_range
-			        && range <= config_.max_range);
-			// return true;
+			// return (range >= config_.min_range
+			//         && range <= config_.max_range);
+			return true;
 		}
 
 		// principal component analysis
-		void normalSetter();
+		void pca();
 
 		public:
 		NormalEstimator();
