@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   velodyne_msgs
+  velodyne_pointcloud
   visualization_msgs
 )
 
