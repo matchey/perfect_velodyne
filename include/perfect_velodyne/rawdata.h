@@ -1,6 +1,6 @@
 
 //
-// include: normal_estimation.h
+// include: rawdata.h
 //
 // last update: '18.xx.xx
 // author: matchey
@@ -8,8 +8,8 @@
 // memo:
 //
 
-#ifndef NORMAL_ESTIMATION_H
-#define NORMAL_ESTIMATION_H
+#ifndef PERFECT_VELODYNE_RAWDATA_H
+#define PERFECT_VELODYNE_RAWDATA_H
 
 #include <velodyne_pointcloud/rawdata.h>
 #include "perfect_velodyne/point_types.h"
@@ -22,11 +22,8 @@ namespace perfect_velodyne
 	typedef PointXYZIRNormal VPointNormal;
 	typedef pcl::PointCloud<VPointNormal> VPointCloudNormal;
 
-	class IndexSelector : public velodyne_rawdata::RawData
+	class RawDataWithNormal : public velodyne_rawdata::RawData
 	{
-		int num_vertical; // vertical num for PCA
-		int num_horizontal; // horizontal num for PCA
-
 		/** configuration parameters */
 		typedef struct {
 			std::string calibrationFile;     ///< calibration file name
@@ -53,16 +50,13 @@ namespace perfect_velodyne
 		/** in-line test whether a point is in range */
 		bool pointInRange(float range)
 		{
-			// return (range >= config_.min_range
-			//         && range <= config_.max_range);
-			return true;
+			return (range >= config_.min_range
+			        && range <= config_.max_range);
+			// return true;
 		}
 
-		// principal component analysis
-		void pca();
-
 		public:
-		NormalEstimator();
+		RawDataWithNormal();
 		void unpack(const velodyne_msgs::VelodynePacket &pkt, VPointCloudNormal &pc);
 
 	};

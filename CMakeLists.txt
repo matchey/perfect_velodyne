@@ -140,7 +140,7 @@ SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/perfect_velodyne.cpp
 # )
-add_library(normal_estimation src/normal_estimation.cpp)
+add_library(normal_estimation src/normal_estimation.cpp src/rawdata.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

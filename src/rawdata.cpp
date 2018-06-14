@@ -1,6 +1,6 @@
 
 //
-// src: normal_estimation.cpp
+// src: rawdata.cpp
 //
 // last update: '18.xx.xx
 // author: matchey
@@ -9,7 +9,7 @@
 //
 
 #include <ros/ros.h>
-#include "perfect_velodyne/normal_estimation.h"
+#include "perfect_velodyne/rawdata.h"
 
 using namespace std;
 using namespace velodyne_rawdata;
@@ -17,15 +17,9 @@ using namespace velodyne_rawdata;
 namespace perfect_velodyne
 {
 
-	NormalEstimator::NormalEstimator()
-	{
-		// ros::param::param<double>("min_range", min_range, 130.0);
-		// ros::param::param<double>("max_range", max_range, 0.9);
-		ros::param::param<int>("VN", num_vertical, 1);
-		ros::param::param<int>("HN", num_horizontal, 2);
-	}
+	RawDataWithNormal::RawDataWithNormal() {}
 
-	void NormalEstimator::unpack(const velodyne_msgs::VelodynePacket &pkt,
+	void RawDataWithNormal::unpack(const velodyne_msgs::VelodynePacket &pkt,
 			VPointCloudNormal &pc)
 	{
 		ROS_DEBUG_STREAM("Received packet, time: " << pkt.stamp);
@@ -170,35 +164,26 @@ namespace perfect_velodyne
 					intensity = (intensity < min_intensity) ? min_intensity : intensity;
 					intensity = (intensity > max_intensity) ? max_intensity : intensity;
 
-					if (pointInRange(distance)) {
+					// if (pointInRange(distance)) {
 
-						// convert polar coordinates to Euclidean XYZ
-						VPointNormal point;
-						point.ring = corrections.laser_ring;
-						point.x = x_coord;
-						point.y = y_coord;
-						point.z = z_coord;
-						point.intensity = intensity;
+					// convert polar coordinates to Euclidean XYZ
+					VPointNormal point;
+					point.ring = corrections.laser_ring;
+					point.x = x_coord;
+					point.y = y_coord;
+					point.z = z_coord;
+					point.intensity = intensity;
 
-						// append this point to the cloud
-						pc.points.push_back(point);
-						++pc.width;
-					}
+					// append this point to the cloud
+					pc.points.push_back(point);
+					++pc.width;
+					// }
 				}
 			}
 		}
 	}
 
 	// private
-
-	// bool NormalEstimator::pointInRange(float range)
-	// {
-	// 	return (range >= min_range
-	// 	        && range <= max_range);
-	// }
-	void NormalEstimator::pca()
-	{
-	}
 
 } // namespace perfect_velodyne
 
