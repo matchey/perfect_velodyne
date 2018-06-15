@@ -8,13 +8,19 @@ project(perfect_velodyne)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
+  angles
+  nodelet
+  roslib
+  tf
+  # geometry_msgs
   roscpp
   sensor_msgs
-  std_msgs
+  # std_msgs
   velodyne_msgs
+  velodyne_driver
   velodyne_pointcloud
-  visualization_msgs
+  dynamic_reconfigure
+  # visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -30,6 +36,21 @@ add_definitions(${PCL_DEFINITIONS})
 # include_directories(/usr/include/eigen3)
 find_package(Eigen3 REQUIRED COMPONENTS system)
 include_directories(${Eigen3_INCLUDE_DIRS})
+
+
+pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
+find_path(YAML_CPP_INCLUDE_DIR
+          NAMES yaml_cpp.h
+          PATHS ${YAML_CPP_INCLUDE_DIRS})
+find_library(YAML_CPP_LIBRARY
+             NAMES YAML_CPP
+             PATHS ${YAML_CPP_LIBRARY_DIRS})
+
+link_directories(${YAML_CPP_LIBRARY_DIRS})
+
+if(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
+  add_definitions(-DHAVE_NEW_YAMLCPP)
+endif(NOT ${YAML_CPP_VERSION} VERSION_LESS "0.5")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -107,6 +128,10 @@ include_directories(${Eigen3_INCLUDE_DIRS})
 #   cfg/DynReconf2.cfg
 # )
 
+generate_dynamic_reconfigure_options(
+  cfg/CloudNode.cfg
+)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -118,8 +143,9 @@ include_directories(${Eigen3_INCLUDE_DIRS})
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
    INCLUDE_DIRS include
-#  LIBRARIES perfect_velodyne
-#  CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs std_msgs velodyne_msgs visualization_msgs
+   LIBRARIES perfect_velodyne_rawdata
+   # CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs std_msgs velodyne_msgs visualization_msgs
+   CATKIN_DEPENDS ${${PROJECT_NAME}_CATKIN_DEPS}
 #  DEPENDS system_lib
 )
 
@@ -140,17 +166,25 @@ SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/perfect_velodyne.cpp
 # )
-add_library(normal_estimation src/convert.cpp src/normal_estimation.cpp src/rawdata.cpp)
+# add_library(normal_estimation src/convert.cpp src/normal_estimation.cpp src/rawdata.cpp)
+# add_library(perfect_velodyne_rawdata src/rawdata.cpp src/calibration.cpp)
+add_library(perfect_velodyne_rawdata src/rawdata.cpp)
+# add_library(normal_estimation src/cloud_nodelet.cpp src/convert.cpp src/normal_estimation.cpp)
+# add_library(perfect_velodyne_convert src/convert.cpp src/normal_estimation.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(normal_estimation ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/perfect_velodyne_node.cpp)
+
+add_executable(normal_estimation_node src/cloud_node.cpp src/convert.cpp src/normal_estimation.cpp)
+add_dependencies(normal_estimation_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -166,6 +200,19 @@ add_library(normal_estimation src/convert.cpp src/normal_estimation.cpp src/rawd
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+target_link_libraries(perfect_velodyne_rawdata
+  velodyne_rawdata
+  ${catkin_LIBRARIES}
+  ${YAML_CPP_LIBRARIES}
+)
+# target_link_libraries(normal_estimation perfect_velodyne_rawdata
+#   ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES}
+# )
+target_link_libraries(normal_estimation_node perfect_velodyne_rawdata
+  velodyne_rawdata
+  velodyne_convert
+  ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${PCL_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -187,6 +234,20 @@ add_library(normal_estimation src/convert.cpp src/normal_estimation.cpp src/rawd
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
+install(TARGETS perfect_velodyne_rawdata
+        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+
+install(TARGETS normal_estimation_node
+        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+
+# install(TARGETS normal_estimation
+#         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+#         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/
@@ -201,7 +262,16 @@ add_library(normal_estimation src/convert.cpp src/normal_estimation.cpp src/rawd
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
-
+install(DIRECTORY include/${PROJECT_NAME}/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+install(FILES nodelets.xml
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+install(DIRECTORY params/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params)
+install(PROGRAMS scripts/gen_calibration.py
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #############
 ## Testing ##
 #############

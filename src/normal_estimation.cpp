@@ -35,27 +35,27 @@ namespace perfect_velodyne
 	void NormalEstimator::normalSetter(perfect_velodyne::VPointCloudNormal::Ptr& pc)
 	{
 		// pcl::PCA<Point> pca;
-		pcl::PCA<VPointNormal> pca;
-		Eigen::Matrix3f vectors;
-		Eigen::Vector3f values; // in descending order
-		double curvature, lambda_sum;
-
-		for(size_t i = 0; i != pc->points.size(); ++i){
-			int ringId = i % num_lasers;
-			if((ringId >= num_vertical) && (ringId < num_lasers - num_vertical)){
-				pca.setInputCloud( getNeighbor(pc, i) );
-				vectors = pca.getEigenVectors();
-				values = pca.getEigenValues();
-				lambda_sum = values(0) + values(1) + values(2);
-				if(lambda_sum){
-					curvature = 3.0 * values(0) / lambda_sum;
-					pc->points[i].normal_x = vectors(0, 0);
-					pc->points[i].normal_y = vectors(0, 1);
-					pc->points[i].normal_z = vectors(0, 2);
-					pc->points[i].curvature = curvature;
-				}
-			}
-		}
+		// pcl::PCA<VPointNormal> pca;
+		// Eigen::Matrix3f vectors;
+		// Eigen::Vector3f values; // in descending order
+		// double curvature, lambda_sum;
+        //
+		// for(size_t i = 0; i != pc->points.size(); ++i){
+		// 	int ringId = i % num_lasers;
+		// 	if((ringId >= num_vertical) && (ringId < num_lasers - num_vertical)){
+		// 		pca.setInputCloud( getNeighbor(pc, i) );
+		// 		vectors = pca.getEigenVectors();
+		// 		values = pca.getEigenValues();
+		// 		lambda_sum = values(0) + values(1) + values(2);
+		// 		if(lambda_sum){
+		// 			curvature = 3.0 * values(0) / lambda_sum;
+		// 			pc->points[i].normal_x = vectors(0, 0);
+		// 			pc->points[i].normal_y = vectors(0, 1);
+		// 			pc->points[i].normal_z = vectors(0, 2);
+		// 			pc->points[i].curvature = curvature;
+		// 		}
+		// 	}
+		// }
 	}
 
 	// private
