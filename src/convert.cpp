@@ -70,7 +70,8 @@ namespace perfect_velodyne
 		}
 
 		//add normal to points
-		// perfect_velodyne::NormalEstimator::normalSetter(outMsg);
+		perfect_velodyne::NormalEstimator ne;
+		ne.normalSetter(outMsg);
 
 		// publish the accumulated cloud message
 		ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
