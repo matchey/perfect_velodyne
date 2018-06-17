@@ -17,8 +17,8 @@ namespace perfect_velodyne
 {
 
 	ConvertWithNormal::ConvertWithNormal(ros::NodeHandle node, ros::NodeHandle private_nh)
-		: Convert(node, private_nh),
-		  data_(new perfect_velodyne::RawDataWithNormal())
+		// : Convert(node, private_nh),
+		: data_(new perfect_velodyne::RawDataWithNormal())
 	{
 		data_->setup(private_nh);
 
