@@ -11,14 +11,18 @@
 #ifndef PERFECT_VELODYNE_CONVERT_H
 #define PERFECT_VELODYNE_CONVERT_H
 
-#include <velodyne_pointcloud/convert.h>
-#include "perfect_velodyne/point_types.h"
-#include "perfect_velodyne/rawdata.h"
+#include <ros/ros.h>
+
+#include <sensor_msgs/PointCloud2.h>
+
+#include <dynamic_reconfigure/server.h>
 #include <perfect_velodyne/CloudNodeConfig.h>
+
+#include "perfect_velodyne/rawdata.h"
 
 namespace perfect_velodyne
 {
-	class ConvertWithNormal : public velodyne_pointcloud::Convert
+	class ConvertWithNormal
 	{
 		void callback(perfect_velodyne::CloudNodeConfig &config,
 				uint32_t level);
@@ -40,6 +44,7 @@ namespace perfect_velodyne
 
 		public:
 		ConvertWithNormal(ros::NodeHandle node, ros::NodeHandle private_nh);
+		~ConvertWithNormal() {}
 
 	};
 

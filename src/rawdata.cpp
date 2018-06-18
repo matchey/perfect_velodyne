@@ -8,17 +8,118 @@
 // memo:
 //
 
-#include <ros/ros.h>
-#include "perfect_velodyne/rawdata.h"
+#include <fstream>
+#include <math.h>
 
-using namespace std;
-using namespace velodyne_rawdata;
+#include <ros/ros.h>
+#include <ros/package.h>
+#include <angles/angles.h>
+
+#include "perfect_velodyne/rawdata.h"
 
 namespace perfect_velodyne
 {
 
 	RawDataWithNormal::RawDataWithNormal() {}
 
+	/** Update parameters: conversions and update */
+	void RawDataWithNormal::setParameters(double min_range,
+								double max_range,
+								double view_direction,
+								double view_width)
+	{
+		config_.min_range = min_range;
+		config_.max_range = max_range;
+
+		//converting angle parameters into the velodyne reference (rad)
+		config_.tmp_min_angle = view_direction + view_width/2;
+		config_.tmp_max_angle = view_direction - view_width/2;
+
+		//computing positive modulo to keep theses angles into [0;2*M_PI]
+		config_.tmp_min_angle = fmod(fmod(config_.tmp_min_angle,2*M_PI) + 2*M_PI,2*M_PI);
+		config_.tmp_max_angle = fmod(fmod(config_.tmp_max_angle,2*M_PI) + 2*M_PI,2*M_PI);
+
+		//converting into the hardware velodyne ref (negative yaml and degrees)
+		//adding 0.5 perfomrs a centered double to int conversion 
+		config_.min_angle = 100 * (2*M_PI - config_.tmp_min_angle) * 180 / M_PI + 0.5;
+		config_.max_angle = 100 * (2*M_PI - config_.tmp_max_angle) * 180 / M_PI + 0.5;
+		if (config_.min_angle == config_.max_angle)
+		{
+			//avoid returning empty cloud if min_angle = max_angle
+			config_.min_angle = 0;
+			config_.max_angle = 36000;
+		}
+	}
+
+	/** Set up for on-line operation. */
+	int RawDataWithNormal::setup(ros::NodeHandle private_nh)
+	{
+		// get path to angles.config file for this device
+		if (!private_nh.getParam("calibration", config_.calibrationFile))
+		{
+			ROS_ERROR_STREAM("No calibration angles specified! Using test values!");
+
+			// have to use something: grab unit test version as a default
+			std::string pkgPath = ros::package::getPath("velodyne_pointcloud");
+			config_.calibrationFile = pkgPath + "/params/64e_utexas.yaml";
+		}
+
+		ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
+
+		calibration_.read(config_.calibrationFile);
+		if (!calibration_.initialized) {
+			ROS_ERROR_STREAM("Unable to open calibration file: " << 
+					config_.calibrationFile);
+			return -1;
+		}
+
+		ROS_INFO_STREAM("Number of lasers: " << calibration_.num_lasers << ".");
+
+		// Set up cached values for sin and cos of all the possible headings
+		for (uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index) {
+			float rotation = angles::from_degrees(ROTATION_RESOLUTION * rot_index);
+			cos_rot_table_[rot_index] = cosf(rotation);
+			sin_rot_table_[rot_index] = sinf(rotation);
+		}
+		return 0;
+	}
+
+	/** Set up for offline operation */
+	int RawDataWithNormal::setupOffline(std::string calibration_file, double max_range_, double min_range_)
+	{
+
+		config_.max_range = max_range_;
+		config_.min_range = min_range_;
+		ROS_INFO_STREAM("data ranges to publish: ["
+				<< config_.min_range << ", "
+				<< config_.max_range << "]");
+
+		config_.calibrationFile = calibration_file;
+
+		ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
+
+		calibration_.read(config_.calibrationFile);
+		if (!calibration_.initialized) {
+			ROS_ERROR_STREAM("Unable to open calibration file: " <<
+					config_.calibrationFile);
+			return -1;
+		}
+
+		// Set up cached values for sin and cos of all the possible headings
+		for (uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index) {
+			float rotation = angles::from_degrees(ROTATION_RESOLUTION * rot_index);
+			cos_rot_table_[rot_index] = cosf(rotation);
+			sin_rot_table_[rot_index] = sinf(rotation);
+		}
+		return 0;
+	}
+
+
+	/** @brief convert raw packet to point cloud
+	 *
+   *  @param pkt raw packet to unpack
+   *  @param pc shared pointer to point cloud (points are appended)
+   */
 	void RawDataWithNormal::unpack(const velodyne_msgs::VelodynePacket &pkt,
 			VPointCloudNormal &pc)
 	{
