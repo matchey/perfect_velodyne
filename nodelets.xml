@@ -1,4 +1,4 @@
-<library path="libcloud_nodelet">
+<library path="lib/libnormal_estimation">
   <class name="perfect_velodyne/CloudNodelet"
          type="perfect_velodyne::CloudNodelet"
          base_class_type="nodelet::Nodelet">

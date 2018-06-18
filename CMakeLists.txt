@@ -273,8 +273,8 @@ install(FILES nodelets.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(DIRECTORY launch/
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
-install(DIRECTORY params/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params)
+# install(DIRECTORY params/
+#         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/params)
 install(PROGRAMS scripts/gen_calibration.py
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 #############
