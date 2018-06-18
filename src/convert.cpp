@@ -26,9 +26,9 @@ namespace perfect_velodyne
 		output_ =
 			node.advertise<sensor_msgs::PointCloud2>("perfect_velodyne/normal", 10);
 
-		srv_ = boost::make_shared <dynamic_reconfigure::Server<velodyne_pointcloud::
+		srv_ = boost::make_shared <dynamic_reconfigure::Server<perfect_velodyne::
 			CloudNodeConfig> > (private_nh);
-		dynamic_reconfigure::Server<velodyne_pointcloud::CloudNodeConfig>::
+		dynamic_reconfigure::Server<perfect_velodyne::CloudNodeConfig>::
 			CallbackType f;
 		f = boost::bind (&ConvertWithNormal::callback, this, _1, _2);
 		srv_->setCallback (f);
@@ -41,7 +41,7 @@ namespace perfect_velodyne
 	}
 
 	// private
-	void ConvertWithNormal::callback(velodyne_pointcloud::CloudNodeConfig &config,
+	void ConvertWithNormal::callback(perfect_velodyne::CloudNodeConfig &config,
 			uint32_t level)
 	{
 		ROS_INFO("Reconfigure Request");

@@ -30,5 +30,5 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(perfect_velodyne::PointXYZIRNormal,
                                   (float, curvature, curvature)
                                   (uint16_t, ring, ring))
 
-#endif // __VELODYNE_POINTCLOUD_POINT_TYPES_H
+#endif // __PERFECT_VELODYNE_POINT_TYPES_H
 
