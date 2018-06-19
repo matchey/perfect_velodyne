@@ -19,6 +19,8 @@
   <arg name="cut_angle" default="-0.01" />
   <arg name="laserscan_ring" default="-1" />
   <arg name="laserscan_resolution" default="0.007" />
+  <arg name="VN" default="1" />
+  <arg name="HN" default="2" />
 
   <!-- start nodelet manager and driver nodelets -->
   <include file="$(find velodyne_driver)/launch/nodelet_manager.launch">
@@ -41,6 +43,8 @@
     <arg name="manager" value="$(arg manager)" />
     <arg name="max_range" value="$(arg max_range)"/>
     <arg name="min_range" value="$(arg min_range)"/>
+    <arg name="num_vertical" value="$(arg VN)"/>
+    <arg name="num_horizontal" value="$(arg HN)"/>
   </include>
 
   <!-- start laserscan nodelet -->

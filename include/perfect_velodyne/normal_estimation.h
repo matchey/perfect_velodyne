@@ -35,9 +35,10 @@ namespace perfect_velodyne
 		size_t orderIndex(const size_t&);
 		void vpoint2pcl(const VPointNormal&, Point&);
 		void vpcloud2pcl(const VpcNormalPtr&, PointCloudPtr&);
-		void pcl2vpoint(const Point&, VPointNormal&);
-		void pcl2vpcloud(const PointCloudPtr&, VpcNormalPtr&);
+		// void pcl2vpoint(const Point&, VPointNormal&);
+		// void pcl2vpcloud(const PointCloudPtr&, VpcNormalPtr&);
 		PointCloudPtr getNeighbor(const PointCloudPtr&, const int&);
+		void showNeighbor(VpcNormalPtr&, const int&);
 
 		public:
 		NormalEstimator();

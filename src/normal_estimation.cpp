@@ -28,8 +28,8 @@ namespace perfect_velodyne
 	{
 		// ros::param::param<double>("min_range", min_range, 130.0);
 		// ros::param::param<double>("max_range", max_range, 0.9);
-		ros::param::param<int>("VN", num_vertical, 1);
-		ros::param::param<int>("HN", num_horizontal, 2);
+		ros::param::param<int>("/perfect_velodyne/VN", num_vertical, 1);
+		ros::param::param<int>("/perfect_velodyne/HN", num_horizontal, 2);
 	}
 
 	void NormalEstimator::normalSetter(perfect_velodyne::VPointCloudNormal::Ptr& vpc)
@@ -59,17 +59,14 @@ namespace perfect_velodyne
 				lambda_sum = values(0) + values(1) + values(2);
 				if(lambda_sum){
 					curvature = 3.0 * values(2) / lambda_sum;
-					vpc->points[i].normal_x = vectors(0, 0);
-					vpc->points[i].normal_y = vectors(0, 1);
-					vpc->points[i].normal_z = vectors(0, 2);
-					vpc->points[i].curvature = curvature;
+					vpc->points[ordered].normal_x = fabs(vectors(0, 2));
+					vpc->points[ordered].normal_y = fabs(vectors(1, 2));
+					vpc->points[ordered].normal_z = fabs(vectors(2, 2));
+					vpc->points[ordered].curvature = curvature;
 				}
 			}
-			if(i == 16015){
-				pcl2vpcloud(neighbors, vpc);
-				break;
-			}
 		}
+		// showNeighbor(vpc, 16015);
 	}
 
 	// private
@@ -98,50 +95,34 @@ namespace perfect_velodyne
 	{
 		Point p;
 
-		if(pc->points.empty()){
-			for(auto it = vpc->points.begin(); it != vpc->points.end(); ++it){
-				vpoint2pcl(*it, p);
-				pc->points.push_back(p);
-			}
-		}else{
-			PointCloudPtr pcXYZ (new PointCloud);
-
-			for(auto it = vpc->points.begin(); it != vpc->points.end(); ++it){
-				vpoint2pcl(*it, p);
-				pcXYZ->points.push_back(p);
-			}
-
-			pc = pcXYZ;
+		if(!pc->points.empty()){
+			pc->points.clear();
+		}
+		for(auto it = vpc->points.begin(); it != vpc->points.end(); ++it){
+			vpoint2pcl(*it, p);
+			pc->points.push_back(p);
 		}
 	}
 
-	void NormalEstimator::pcl2vpoint(const Point& p, VPointNormal& vp)
-	{
-		vp.x = p.x;
-		vp.y = p.y;
-		vp.z = p.z;
-	}
-
-	void NormalEstimator::pcl2vpcloud(const PointCloudPtr& pc, VpcNormalPtr& vpc)
-	{
-		VPointNormal vp;
-
-		if(vpc->points.empty()){
-			for(auto it = pc->points.begin(); it != pc->points.end(); ++it){
-				pcl2vpoint(*it, vp);
-				vpc->points.push_back(vp);
-			}
-		}else{
-			VpcNormalPtr v_pc (new VPointCloudNormal);
-
-			for(auto it = pc->points.begin(); it != pc->points.end(); ++it){
-				pcl2vpoint(*it, vp);
-				v_pc->points.push_back(vp);
-			}
-
-			vpc = v_pc;
-		}
-	}
+	// void NormalEstimator::pcl2vpoint(const Point& p, VPointNormal& vp)
+	// {
+	// 	vp.x = p.x;
+	// 	vp.y = p.y;
+	// 	vp.z = p.z;
+	// }
+    //
+	// void NormalEstimator::pcl2vpcloud(const PointCloudPtr& pc, VpcNormalPtr& vpc)
+	// {
+	// 	VPointNormal vp;
+    //
+	// 	if(!vpc->points.empty()){
+	// 		vpc->points.clear();
+	// 	}
+	// 	for(auto it = pc->points.begin(); it != pc->points.end(); ++it){
+	// 		pcl2vpoint(*it, vp);
+	// 		vpc->points.push_back(vp);
+	// 	}
+	// }
 
 	PointCloudPtr NormalEstimator::getNeighbor(const PointCloudPtr& pc, const int& idx)
 	{
@@ -149,43 +130,25 @@ namespace perfect_velodyne
 		const int width = num_horizontal * num_lasers;
 
 		for(int vert = idx - num_vertical; vert <= idx + num_vertical; ++vert){
-			// cerr << "idx : " << idx << endl;
-			// cerr << "vert : " << vert << endl;
-			// cerr << "num_vertical : " << num_vertical << endl;
-			// cerr << "num_horizontal : " << num_horizontal << endl;
-			// cerr << "num_lasers : " << num_lasers << endl;
-			// cerr << "width : " << width << endl;
 			for(int horiz = vert - width; horiz <= vert + width; horiz += num_lasers){
 				int i = (orderIndex(horiz) + pc->points.size()) % pc->points.size();
 				neighbors->points.push_back(pc->points[i]);
-				// cerr << "i : " << i << endl;
-				// break;
 			}
-			// break;
 		}
-		// cerr << "HOGEHOGE" << endl;
-		// if(neighbors->points.empty()){
-		// 	Point p;
-		// 	p.x = 0.0;
-		// 	p.y = 0.0;
-		// 	p.z = 0.0;
-		// 	neighbors->points.push_back(p);
-		// 	p.x = 1.0;
-		// 	p.y = 1.0;
-		// 	p.z = 0.0;
-		// 	neighbors->points.push_back(p);
-		// 	p.x = 1.0;
-		// 	p.y = 1.0;
-		// 	p.z = 0.0;
-		// 	neighbors->points.push_back(p);
-		// 	p.x = 0.0;
-		// 	p.y = 1.0;
-		// 	p.z = 1.0;
-		// 	neighbors->points.push_back(p);
-		// }
 
 		return neighbors;
 	}
 
+	void NormalEstimator::showNeighbor(VpcNormalPtr& pc, const int& idx)
+	{
+		const int width = num_horizontal * num_lasers;
+
+		for(int vert = idx - num_vertical; vert <= idx + num_vertical; ++vert){
+			for(int horiz = vert - width; horiz <= vert + width; horiz += num_lasers){
+				int i = (orderIndex(horiz) + pc->points.size()) % pc->points.size();
+				pc->points[i].normal_z = 10.0;
+			}
+		}
+	}
 } // namespace perfect_velodyne
 
