@@ -21,19 +21,23 @@ namespace perfect_velodyne
 	// typedef pcl::PointXYZINormal PointNormal;
 	// typedef pcl::PointCloud<PointNormal> PointCloudNormal;
 	// typedef pcl::PointCloud<PointNormal>::Ptr PointCloudNormalPtr;
-	// typedef pcl::PointXYZ Point;
-	// typedef pcl::PointCloud<Point> PointCloud;
-	// typedef PointCloud::Ptr PointCloudPtr;
+	typedef pcl::PointXYZ Point;
+	typedef pcl::PointCloud<Point> PointCloud;
+	typedef PointCloud::Ptr PointCloudPtr;
 
 	class NormalEstimator
 	{
 		int num_vertical; // vertical num for PCA
 		int num_horizontal; // horizontal num for PCA
-		const int num_lasers;
+		const int num_lasers; // HDL32e -> 32
 
 		bool pointInRange(const VPointNormal&);
 		size_t orderIndex(const size_t&);
-		VpcNormalPtr getNeighbor(const perfect_velodyne::VPointCloudNormal::Ptr&, const size_t&);
+		void vpoint2pcl(const VPointNormal&, Point&);
+		void vpcloud2pcl(const VpcNormalPtr&, PointCloudPtr&);
+		void pcl2vpoint(const Point&, VPointNormal&);
+		void pcl2vpcloud(const PointCloudPtr&, VpcNormalPtr&);
+		PointCloudPtr getNeighbor(const PointCloudPtr&, const int&);
 
 		public:
 		NormalEstimator();

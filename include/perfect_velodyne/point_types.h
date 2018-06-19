@@ -6,6 +6,14 @@
 
 namespace perfect_velodyne
 {
+  // struct PointXYZIR
+  // {
+  //   PCL_ADD_POINT4D;                    // quad-word XYZ
+  //   float    intensity;                 ///< laser intensity reading
+  //   uint16_t ring;                      ///< laser ring number
+  //   EIGEN_MAKE_ALIGNED_OPERATOR_NEW     // ensure proper alignment
+  // } EIGEN_ALIGN16;
+
   struct PointXYZIRNormal
   {
     PCL_ADD_POINT4D;                    // quad-word XYZ
@@ -18,6 +26,12 @@ namespace perfect_velodyne
 
 }; // namespace perfect_velodyne
 
+// POINT_CLOUD_REGISTER_POINT_STRUCT(perfect_velodyne::PointXYZIR,
+//                                   (float, x, x)
+//                                   (float, y, y)
+//                                   (float, z, z)
+//                                   (float, intensity, intensity)
+//                                   (uint16_t, ring, ring))
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(perfect_velodyne::PointXYZIRNormal,
                                   (float, x, x)

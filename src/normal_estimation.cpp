@@ -32,30 +32,44 @@ namespace perfect_velodyne
 		ros::param::param<int>("HN", num_horizontal, 2);
 	}
 
-	void NormalEstimator::normalSetter(perfect_velodyne::VPointCloudNormal::Ptr& pc)
+	void NormalEstimator::normalSetter(perfect_velodyne::VPointCloudNormal::Ptr& vpc)
 	{
-		// pcl::PCA<Point> pca;
-		// pcl::PCA<VPointNormal> pca;
-		// Eigen::Matrix3f vectors;
-		// Eigen::Vector3f values; // in descending order
-		// double curvature, lambda_sum;
-        //
-		// for(size_t i = 0; i != pc->points.size(); ++i){
-		// 	int ringId = i % num_lasers;
-		// 	if((ringId >= num_vertical) && (ringId < num_lasers - num_vertical)){
-		// 		pca.setInputCloud( getNeighbor(pc, i) );
-		// 		vectors = pca.getEigenVectors();
-		// 		values = pca.getEigenValues();
-		// 		lambda_sum = values(0) + values(1) + values(2);
-		// 		if(lambda_sum){
-		// 			curvature = 3.0 * values(0) / lambda_sum;
-		// 			pc->points[i].normal_x = vectors(0, 0);
-		// 			pc->points[i].normal_y = vectors(0, 1);
-		// 			pc->points[i].normal_z = vectors(0, 2);
-		// 			pc->points[i].curvature = curvature;
-		// 		}
-		// 	}
-		// }
+		PointCloudPtr pc (new PointCloud);
+		PointCloudPtr neighbors (new PointCloud);
+
+		vpcloud2pcl(vpc, pc);
+		
+		pcl::PCA<Point> pca;
+		Eigen::Matrix3f vectors;
+		Eigen::Vector3f values; // in descending order
+		double curvature, lambda_sum;
+
+		for(size_t i = 0; i != pc->points.size(); ++i){
+			int ordered = orderIndex(i);
+			int ringId = ordered % num_lasers;
+			if((ringId >= num_vertical) && (ringId < num_lasers - num_vertical)){
+				neighbors = getNeighbor(pc, i);
+				if(neighbors->points.empty()){
+					cerr << "i : " << i << ", ring : " << ringId << endl;
+					break;
+				}
+				pca.setInputCloud(neighbors);
+				vectors = pca.getEigenVectors();
+				values = pca.getEigenValues();
+				lambda_sum = values(0) + values(1) + values(2);
+				if(lambda_sum){
+					curvature = 3.0 * values(2) / lambda_sum;
+					vpc->points[i].normal_x = vectors(0, 0);
+					vpc->points[i].normal_y = vectors(0, 1);
+					vpc->points[i].normal_z = vectors(0, 2);
+					vpc->points[i].curvature = curvature;
+				}
+			}
+			if(i == 16015){
+				pcl2vpcloud(neighbors, vpc);
+				break;
+			}
+		}
 	}
 
 	// private
@@ -73,21 +87,102 @@ namespace perfect_velodyne
 		return  ringId < 16 ? idx + ringId : idx + ringId - 31;
 	}
 
-	VpcNormalPtr NormalEstimator::getNeighbor(const perfect_velodyne::VPointCloudNormal::Ptr& pc,
-			                                 const size_t& idx)
+	void NormalEstimator::vpoint2pcl(const VPointNormal& vp, Point& p)
 	{
-		VpcNormalPtr neighbors (new VPointCloudNormal);
-		const int width = num_horizontal*num_lasers;
-		// const int num_scan = pc->points.size();
-		// const int num_scan = pc->points.size() / num_lasers;
+		p.x = vp.x;
+		p.y = vp.y;
+		p.z = vp.z;
+	}
 
-		for(size_t vert = idx - num_vertical; vert <= idx + num_vertical; ++vert){
-			for(size_t horiz = vert - width;
-						horiz <= vert + width; vert+=num_lasers){
-				int i = (horiz + pc->points.size()) % pc->points.size();
-				neighbors->points.push_back(pc->points[i]);
+	void NormalEstimator::vpcloud2pcl(const VpcNormalPtr& vpc, PointCloudPtr& pc)
+	{
+		Point p;
+
+		if(pc->points.empty()){
+			for(auto it = vpc->points.begin(); it != vpc->points.end(); ++it){
+				vpoint2pcl(*it, p);
+				pc->points.push_back(p);
 			}
+		}else{
+			PointCloudPtr pcXYZ (new PointCloud);
+
+			for(auto it = vpc->points.begin(); it != vpc->points.end(); ++it){
+				vpoint2pcl(*it, p);
+				pcXYZ->points.push_back(p);
+			}
+
+			pc = pcXYZ;
 		}
+	}
+
+	void NormalEstimator::pcl2vpoint(const Point& p, VPointNormal& vp)
+	{
+		vp.x = p.x;
+		vp.y = p.y;
+		vp.z = p.z;
+	}
+
+	void NormalEstimator::pcl2vpcloud(const PointCloudPtr& pc, VpcNormalPtr& vpc)
+	{
+		VPointNormal vp;
+
+		if(vpc->points.empty()){
+			for(auto it = pc->points.begin(); it != pc->points.end(); ++it){
+				pcl2vpoint(*it, vp);
+				vpc->points.push_back(vp);
+			}
+		}else{
+			VpcNormalPtr v_pc (new VPointCloudNormal);
+
+			for(auto it = pc->points.begin(); it != pc->points.end(); ++it){
+				pcl2vpoint(*it, vp);
+				v_pc->points.push_back(vp);
+			}
+
+			vpc = v_pc;
+		}
+	}
+
+	PointCloudPtr NormalEstimator::getNeighbor(const PointCloudPtr& pc, const int& idx)
+	{
+		PointCloudPtr neighbors (new PointCloud);
+		const int width = num_horizontal * num_lasers;
+
+		for(int vert = idx - num_vertical; vert <= idx + num_vertical; ++vert){
+			// cerr << "idx : " << idx << endl;
+			// cerr << "vert : " << vert << endl;
+			// cerr << "num_vertical : " << num_vertical << endl;
+			// cerr << "num_horizontal : " << num_horizontal << endl;
+			// cerr << "num_lasers : " << num_lasers << endl;
+			// cerr << "width : " << width << endl;
+			for(int horiz = vert - width; horiz <= vert + width; horiz += num_lasers){
+				int i = (orderIndex(horiz) + pc->points.size()) % pc->points.size();
+				neighbors->points.push_back(pc->points[i]);
+				// cerr << "i : " << i << endl;
+				// break;
+			}
+			// break;
+		}
+		// cerr << "HOGEHOGE" << endl;
+		// if(neighbors->points.empty()){
+		// 	Point p;
+		// 	p.x = 0.0;
+		// 	p.y = 0.0;
+		// 	p.z = 0.0;
+		// 	neighbors->points.push_back(p);
+		// 	p.x = 1.0;
+		// 	p.y = 1.0;
+		// 	p.z = 0.0;
+		// 	neighbors->points.push_back(p);
+		// 	p.x = 1.0;
+		// 	p.y = 1.0;
+		// 	p.z = 0.0;
+		// 	neighbors->points.push_back(p);
+		// 	p.x = 0.0;
+		// 	p.y = 1.0;
+		// 	p.z = 1.0;
+		// 	neighbors->points.push_back(p);
+		// }
 
 		return neighbors;
 	}
