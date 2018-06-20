@@ -206,18 +206,13 @@ add_dependencies(normal_estimation_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(perfect_velodyne_rawdata
-  velodyne_rawdata
   ${catkin_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
 target_link_libraries(normal_estimation perfect_velodyne_rawdata
-  velodyne_rawdata
-  velodyne_convert
   ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES}
 )
 target_link_libraries(normal_estimation_node perfect_velodyne_rawdata
-  velodyne_rawdata
-  velodyne_convert
   ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${PCL_LIBRARIES}
 )
 
