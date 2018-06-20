@@ -15,6 +15,7 @@
 // #include <pcl/point_cloud.h>
 #include <pcl/common/pca.h>
 #include <Eigen/Core>
+#include <omp.h>
 // #include "perfect_velodyne/rawdata.h"
 #include "perfect_velodyne/normal_estimation.h"
 
@@ -44,15 +45,16 @@ namespace perfect_velodyne
 		Eigen::Vector3f values; // in descending order
 		double curvature, lambda_sum;
 
-		for(size_t i = 0; i != pc->points.size(); ++i){
+		// #pragma omp parallel for
+		for(size_t i = 0; i < pc->points.size(); ++i){ // omp : != to <
 			int ordered = orderIndex(i);
 			int ringId = ordered % num_lasers;
 			if((ringId >= num_vertical) && (ringId < num_lasers - num_vertical)){
 				neighbors = getNeighbor(pc, i);
-				if(neighbors->points.empty()){
-					cerr << "i : " << i << ", ring : " << ringId << endl;
-					break;
-				}
+				// if(neighbors->points.empty()){
+				// 	cerr << "i : " << i << ", ring : " << ringId << endl;
+				// 	break; // error: break statement used with OpenMP for loop
+				// }
 				pca.setInputCloud(neighbors);
 				vectors = pca.getEigenVectors();
 				values = pca.getEigenValues();

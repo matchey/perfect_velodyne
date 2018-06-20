@@ -39,6 +39,11 @@ add_definitions(${PCL_DEFINITIONS})
 find_package(Eigen3 REQUIRED COMPONENTS system)
 include_directories(${Eigen3_INCLUDE_DIRS})
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML_CPP REQUIRED yaml-cpp)
