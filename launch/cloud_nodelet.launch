@@ -8,9 +8,13 @@
   <arg name="min_range" default="0.9" />
   <arg name="num_vertical" default="1" />
   <arg name="num_horizontal" default="2" />
+  <arg name="flag_omp" default="false" />
+  <arg name="flag_org" default="false" />
 
   <param name="/perfect_velodyne/VN" value="$(arg num_vertical)"/>
   <param name="/perfect_velodyne/HN" value="$(arg num_horizontal)"/>
+  <param name="/perfect_velodyne/OpenMP" value="$(arg flag_omp)"/>
+  <param name="/perfect_velodyne/pub_org" value="$(arg flag_org)"/>
   <node pkg="nodelet" type="nodelet" name="$(arg manager)_cloud"
         args="load perfect_velodyne/CloudNodelet $(arg manager)">
     <param name="calibration" value="$(arg calibration)"/>

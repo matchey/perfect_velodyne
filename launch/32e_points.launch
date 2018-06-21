@@ -21,6 +21,8 @@
   <arg name="laserscan_resolution" default="0.007" />
   <arg name="VN" default="1" />
   <arg name="HN" default="2" />
+  <arg name="omp" default="false" />
+  <arg name="pub_org" default="true" />
 
   <!-- start nodelet manager and driver nodelets -->
   <include file="$(find velodyne_driver)/launch/nodelet_manager.launch">
@@ -45,6 +47,8 @@
     <arg name="min_range" value="$(arg min_range)"/>
     <arg name="num_vertical" value="$(arg VN)"/>
     <arg name="num_horizontal" value="$(arg HN)"/>
+    <arg name="flag_omp" value="$(arg omp)"/>
+    <arg name="flag_org" value="$(arg pub_org)"/>
   </include>
 
   <!-- start laserscan nodelet -->

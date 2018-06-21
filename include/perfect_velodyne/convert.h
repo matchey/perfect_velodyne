@@ -24,6 +24,8 @@ namespace perfect_velodyne
 {
 	class ConvertWithNormal
 	{
+		bool flag_pub_org;
+
 		void callback(perfect_velodyne::CloudNodeConfig &config,
 				uint32_t level);
 		void processScan(const velodyne_msgs::VelodyneScan::ConstPtr &scanMsg);
@@ -35,6 +37,7 @@ namespace perfect_velodyne
 		boost::shared_ptr<perfect_velodyne::RawDataWithNormal> data_;
 		ros::Subscriber velodyne_scan_;
 		ros::Publisher output_;
+		ros::Publisher output_org_;
 
 		/// configuration parameters
 		typedef struct {

@@ -31,6 +31,7 @@ namespace perfect_velodyne
 		// ros::param::param<double>("max_range", max_range, 0.9);
 		ros::param::param<int>("/perfect_velodyne/VN", num_vertical, 1);
 		ros::param::param<int>("/perfect_velodyne/HN", num_horizontal, 2);
+		ros::param::param<bool>("/perfect_velodyne/OpenMP", flag_omp, false);
 	}
 
 	void NormalEstimator::normalSetter(perfect_velodyne::VPointCloudNormal::Ptr& vpc)
@@ -45,7 +46,7 @@ namespace perfect_velodyne
 		Eigen::Vector3f values; // in descending order
 		double curvature, lambda_sum;
 
-		// #pragma omp parallel for
+#pragma omp parallel for if(flag_omp) private(pca, vectors, values, curvature, lambda_sum, neighbors) num_threads(2)
 		for(size_t i = 0; i < pc->points.size(); ++i){ // omp : != to <
 			int ordered = orderIndex(i);
 			int ringId = ordered % num_lasers;
@@ -81,9 +82,9 @@ namespace perfect_velodyne
 
 	size_t NormalEstimator::orderIndex(const size_t& idx)
 	{
-		size_t ringId = idx % num_lasers;
+		size_t ringId = idx % num_lasers; // 2^n の余りだからビットシフトのが早い??
 
-		return  ringId < 16 ? idx + ringId : idx + ringId - 31;
+		return  ringId < 16 ? idx + ringId : idx + ringId - 31; // 三項演算子は遅い??
 	}
 
 	void NormalEstimator::vpoint2pcl(const VPointNormal& vp, Point& p)

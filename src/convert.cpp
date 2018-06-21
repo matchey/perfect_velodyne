@@ -19,12 +19,18 @@ namespace perfect_velodyne
 	ConvertWithNormal::ConvertWithNormal(ros::NodeHandle node, ros::NodeHandle private_nh)
 		: data_(new perfect_velodyne::RawDataWithNormal())
 	{
+		ros::param::param<bool>("/perfect_velodyne/pub_org", flag_pub_org, false);
+
 		data_->setup(private_nh);
 
 		// advertise output point cloud (before subscribing to input data)
 		output_ =
 			node.advertise<sensor_msgs::PointCloud2>("perfect_velodyne/normal", 10);
 
+		if(flag_pub_org){
+			output_org_ =
+				node.advertise<sensor_msgs::PointCloud2>("velodyne_points", 10);
+		}
 		srv_ = boost::make_shared <dynamic_reconfigure::Server<perfect_velodyne::
 			CloudNodeConfig> > (private_nh);
 		dynamic_reconfigure::Server<perfect_velodyne::CloudNodeConfig>::
@@ -51,8 +57,9 @@ namespace perfect_velodyne
 	/** @brief Callback for raw scan messages. */
 	void ConvertWithNormal::processScan(const velodyne_msgs::VelodyneScan::ConstPtr &scanMsg)
 	{
-		if (output_.getNumSubscribers() == 0)         // no one listening?
-			return;                                     // avoid much work
+		if (!(output_.getNumSubscribers())) // no one listening?
+			return;                     	// avoid much work
+		// if only use /velodyne_points, launch in velodyne_pointcloud
 
 		// allocate a point cloud with same time and frame ID as raw data
 		perfect_velodyne::VPointCloudNormal::Ptr
@@ -68,13 +75,20 @@ namespace perfect_velodyne
 			data_->unpack(scanMsg->packets[i], *outMsg);
 		}
 
+		if(flag_pub_org){
+			// publish the accumulated cloud message
+			ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
+					<< " Velodyne points, time: " << outMsg->header.stamp);
+			output_org_.publish(outMsg);
+		}
+
 		//add normal to points
 		perfect_velodyne::NormalEstimator ne;
 		ne.normalSetter(outMsg);
 
 		// publish the accumulated cloud message
 		ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
-				<< " Velodyne points, time: " << outMsg->header.stamp);
+				<< " Velodyne points with normal, time: " << outMsg->header.stamp);
 		output_.publish(outMsg);
 	}
 
