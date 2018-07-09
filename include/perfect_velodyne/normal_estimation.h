@@ -31,7 +31,6 @@ namespace perfect_velodyne
 		int num_horizontal; // horizontal num for PCA
 		const int num_lasers; // HDL32e -> 32
 		bool flag_omp;
-		bool flag_pub_org;
 
 		bool pointInRange(const VPointNormal&);
 		size_t orderIndex(const size_t&);

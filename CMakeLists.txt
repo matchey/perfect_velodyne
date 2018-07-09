@@ -21,7 +21,8 @@ find_package(catkin REQUIRED COMPONENTS
   velodyne_pointcloud
   dynamic_reconfigure
   # visualization_msgs
-  pcl_conversions
+  # pcl_conversions
+  pcl_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -30,10 +31,10 @@ find_package(Boost COMPONENTS signals)
 
 find_package(cmake_modules)
 
-find_package(PCL 1.8.0 REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+# find_package(PCL 1.8.0 REQUIRED)
+# include_directories(${PCL_INCLUDE_DIRS})
+# link_directories(${PCL_LIBRARY_DIRS})
+# add_definitions(${PCL_DEFINITIONS})
 
 # include_directories(/usr/include/eigen3)
 find_package(Eigen3 REQUIRED COMPONENTS system)
@@ -178,7 +179,7 @@ SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall ${CMAKE_CXX_FLAGS}")
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/perfect_velodyne.cpp
 # )
-add_library(perfect_velodyne_rawdata src/rawdata.cpp)
+add_library(perfect_velodyne_rawdata src/rawdata.cpp src/calibration.cpp)
 add_library(perfect_velodyne_convert src/convert.cpp src/normal_estimation.cpp)
 add_library(normal_estimation src/cloud_nodelet.cpp src/convert.cpp src/normal_estimation.cpp)
 
@@ -212,13 +213,18 @@ add_dependencies(normal_estimation_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 # )
 target_link_libraries(perfect_velodyne_rawdata
   ${catkin_LIBRARIES}
+  # ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
 target_link_libraries(normal_estimation perfect_velodyne_rawdata
-  ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES}
+  ${catkin_LIBRARIES}
+  # ${PCL_LIBRARIES}
+  ${YAML_CPP_LIBRARIES}
 )
 target_link_libraries(normal_estimation_node perfect_velodyne_rawdata
-  ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES} ${PCL_LIBRARIES}
+  ${catkin_LIBRARIES}
+  # ${PCL_LIBRARIES}
+  ${YAML_CPP_LIBRARIES}
 )
 
 #############
