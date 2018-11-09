@@ -16,49 +16,35 @@
 
 namespace Eigen{
 	using Vector6d = Matrix<double, 6, 1>;
+	using Vector3dArray = Matrix<double, 3, Eigen::Dynamic>;
 }
 
 namespace perfect_velodyne
 {
-	typedef PointXYZIRNormal VPointNormal;
-	typedef pcl::PointCloud<VPointNormal> VPointCloudNormal;
-	typedef VPointCloudNormal::Ptr VpcNormalPtr;
-	// typedef pcl::PointXYZINormal PointNormal;
-	// typedef pcl::PointCloud<PointNormal> PointCloudNormal;
-	// typedef pcl::PointCloud<PointNormal>::Ptr PointCloudNormalPtr;
-	typedef pcl::PointXYZ Point;
-	typedef pcl::PointCloud<Point> PointCloud;
-	typedef PointCloud::Ptr PointCloudPtr;
+	using VPoint = PointXYZIRNormal;
+	using VPointCloud = pcl::PointCloud<VPoint>;
+	using VPointCloudPtr = VPointCloud::Ptr;
 
 	class NormalEstimator
 	{
-		int num_vertical; // vertical num for PCA
-		int num_horizontal; // horizontal num for PCA
-		const int num_lasers; // HDL32e -> 32
-		bool flag_omp;
-		size_t npoints;
-		VpcNormalPtr vpc;
-
-		bool pointInRange(const VPointNormal&);
-		size_t getIndex(const size_t&);
-		// void vpoint2pcl(const VPointNormal&, Point&);
-		// void vpcloud2pcl(const VpcNormalPtr&, PointCloudPtr&);
-		// void pcl2vpoint(const Point&, VPointNormal&);
-		// void pcl2vpcloud(const PointCloudPtr&, VpcNormalPtr&);
-		PointCloudPtr getNeighbor(const VpcNormalPtr&, const int&);
-		// PointCloudPtr getNeighbor(const PointCloudPtr&, const int&);
-		void removeOutliers(PointCloudPtr&, const Eigen::Matrix3d&, const Eigen::Vector3d&);
-		// void removeOutliers(PointCloudPtr&, const Eigen::Matrix3d&, const Eigen::Vector3d&);
-		bool inverse(const Eigen::Vector6d&, Eigen::Matrix3d&);
-		void showNeighbor(VpcNormalPtr&, const int&);
-		void showPoints(const pcl::PointIndices::Ptr&);
-
 		public:
 		NormalEstimator();
+		void normalSetter(VPointCloudPtr&); // calc normal with singular value decomposition
 
-		// calc normal with principal component analysis
-		void normalSetter(perfect_velodyne::VPointCloudNormal::Ptr&);
+		private:
+		size_t getIndex(const size_t&);
+		void getNeighbor(const int&, Eigen::Vector3dArray&);
+		void removeOutliers(Eigen::Vector3dArray&, const Eigen::Matrix3d&, const Eigen::Vector3d&);
+		bool inverse(const Eigen::Vector6d&, Eigen::Matrix3d&);
+		void showNeighbor(const int&);
 
+		int num_vertical; // vertical num for PCA
+		int num_horizontal; // horizontal num for PCA
+		bool flag_omp; // whether to use OpenMP
+
+		const int num_lasers; // HDL32e -> 32
+		VPointCloudPtr vpc; // input pointcloud
+		size_t npoints; //number of input points
 	};
 
 } // namespace perfect_velodyne
