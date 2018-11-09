@@ -41,7 +41,7 @@ namespace perfect_velodyne
 		npoints = vpc->points.size();
 		
 		Eigen::Matrix3d vectors;
-		Eigen::Vector3d values; // in descending order
+		Eigen::Vector3d values; // not in descending order
 		double curvature, lambda_sum;
 
 #pragma omp parallel for if(flag_omp)\
@@ -49,46 +49,41 @@ namespace perfect_velodyne
 		for(size_t i = 0; i < npoints; ++i){ // omp : != to <
 			int idx = getIndex(i);
 			if(vpc->points[idx].range){
-				Eigen::Vector3dArray neighbors;
-				getNeighbor(i, neighbors);
-				if(neighbors.cols() < 3){
-					// cerr << "[PCA] number of points < 3" << endl;
-					// vpc->points[idx].normal_z = 10;
-					continue;
-				}
-				Eigen::JacobiSVD<Eigen::Vector3dArray> svd(neighbors,
-														Eigen::ComputeThinU | Eigen::ComputeThinV);
-				vectors = svd.matrixU();
-				int sign = Eigen::Vector3d(vpc->points[idx].x,
-										   vpc->points[idx].y,
-										   vpc->points[idx].z).dot(vectors.col(2)) < 0 ? 1 : -1;
-				vectors.col(2) *= sign;
-				values = svd.singularValues();
-				lambda_sum = values(0) + values(1) + values(2);
-				// lambda_sum = sqrt(values(0)) + sqrt(values(1)) + sqrt(values(2));
-				if(lambda_sum){
-					curvature = 3.0 * values(2) / lambda_sum;
-					vpc->points[idx].normal_x = vectors(0, 2);
-					vpc->points[idx].normal_y = vectors(1, 2);
-					vpc->points[idx].normal_z = vectors(2, 2);
-					vpc->points[idx].curvature = curvature;
-					// curvature = 3.0 * sqrt(values(2)) / lambda_sum;
+				Eigen::Matrix3d vcov;
+				if(getMatCov(i, vcov)){
+					Eigen::EigenSolver<Eigen::Matrix3d> es(vcov);
+					values = es.eigenvalues().real(); // are not sorted in any particular order.
+					vectors = es.eigenvectors().real();
+
+					int min = 0;// int mid = 0; int max = 0;
+					for(int i = 1; i < 3; ++i){
+						min = values(i) < values(min) ? i : min;
+					}
+					
+					int sign = Eigen::Vector3d(vpc->points[idx].x,
+							vpc->points[idx].y,
+							vpc->points[idx].z).dot(vectors.col(min)) < 0 ? 1 : -1;
+					vectors.col(min) *= sign;
+					// values = svd.singularValues();
+					lambda_sum = values(0) + values(1) + values(2);
+					// lambda_sum = sqrt(values(0)) + sqrt(values(1)) + sqrt(values(2));
+					if(lambda_sum){
+						curvature = 3.0 * values(min) / lambda_sum;
+						vpc->points[idx].normal_x = vectors(0, min);
+						vpc->points[idx].normal_y = vectors(1, min);
+						vpc->points[idx].normal_z = vectors(2, min);
+						vpc->points[idx].curvature = curvature;
+						// curvature = 3.0 * sqrt(values(2)) / lambda_sum;
+					}
 				}
 			}
 		}
-		showNeighbor(31713); // ng
-		// showNeighbor(31744); // ok
+		// showNeighbor(31713);
+		// showNeighbor(31744);
 	}
 
 	// private
-	size_t NormalEstimator::getIndex(const size_t& ordered)
-	{
-		size_t ringId = ordered % num_lasers; // 2^n の余りだからビットシフトのが早い??
-
-		return  ringId < 16 ? ordered + ringId : ordered + ringId - 31; // 三項演算子は遅い??
-	}
-
-	void NormalEstimator::getNeighbor(const int& ordered, Eigen::Vector3dArray& neighbors)
+	bool NormalEstimator::getMatCov(const int& ordered, Eigen::Matrix3d& mat)
 	{
 		const int width = num_horizontal * num_lasers;
 
@@ -96,12 +91,16 @@ namespace perfect_velodyne
 		const int vbegin =  ringId < num_vertical ? ordered - ringId : ordered - num_vertical;
 		const int vend = ringId < num_lasers - num_vertical ? ordered + num_vertical :
 															  ordered + num_lasers - ringId;
-		neighbors.resize(Eigen::NoChange, (2*num_horizontal+1) * (vend-vbegin+1));
 
 		int idx = getIndex(ordered);
 		Eigen::Vector3d center(vpc->points[idx].x, vpc->points[idx].y, vpc->points[idx].z);
 		Eigen::Vector6d vcov; // xx, xy, xz, yy, yz, zz
+		vcov << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 
+		const double threshold = 1.5*0.0216*pow(center.norm(), 1.8967);
+
+		Eigen::Vector3dArray neighbors;
+		neighbors.resize(Eigen::NoChange, (2*num_horizontal+1) * (vend-vbegin+1));
 		size_t num_neighbors = 0;
 
 		for(int vert = vbegin; vert != vend; ++vert){
@@ -109,44 +108,88 @@ namespace perfect_velodyne
 				idx = getIndex((horiz + npoints) % npoints);
 				if(vpc->points[idx].range){
 					Eigen::Vector3d p(vpc->points[idx].x, vpc->points[idx].y, vpc->points[idx].z);
-					neighbors.col(num_neighbors) = p - center;
-					int cnt = 0;
-					for(int i = 0; i != 3; ++i){
-						for(int j = i; j != 3; ++j){
-							++cnt;
+					p -= center;
+					if(p.norm() < threshold){
+						int cnt = 0;
+						for(int i = 0; i != 3; ++i){
+							for(int j = i; j != 3; ++j){
+								vcov(cnt) += p(i) * p(j);
+								++cnt;
+							}
 						}
+						neighbors.col(num_neighbors) = p;
+						++num_neighbors;
 					}
-					++num_neighbors;
 				}
 			}
 		}
 
-		neighbors.conservativeResize(Eigen::NoChange, num_neighbors);
+		if(num_neighbors < 5) return false;
 
-		if(num_neighbors){
-			Eigen::Matrix3d inv;
-			if(inverse(vcov, inv)){
-				// removeOutliers(neighbors, inv, center);
-			}
-		}
+		vcov /= num_neighbors;
+		// Eigen::Matrix3d inv;
+        //
+		// if(inverse(vcov, inv)){
+		// 	// num_neighbors = removeOutliers(neighbors, inv);
+		// }
+        //
+		// if(num_neighbors < 5) return false;
+
+		mat << vcov(0), vcov(1), vcov(2),
+			   vcov(1), vcov(3), vcov(4),
+			   vcov(2), vcov(4), vcov(5);
+		// mat = inv;
+		// neighbors.conservativeResize(Eigen::NoChange, num_neighbors);
+
+		return true;
 	}
 
-	void NormalEstimator::removeOutliers(Eigen::Vector3dArray& neighbors,
-											const Eigen::Matrix3d& inv, const Eigen::Vector3d& ave)
+	int NormalEstimator::removeOutliers(Eigen::Vector3dArray& neighbors, Eigen::Matrix3d& mat)
 	{
-		// const double th = 10.0;
+		const double threshold = 1.5;
 
 		size_t num_neighbors = neighbors.cols();
 
+		Eigen::Matrix3d inv = mat;
+
+		int count_extract = 0;
+		Eigen::Vector3d ave(0.0, 0.0, 0.0);
+		Eigen::Vector6d prodsum; // xx, xy, xz, yy, yz, zz
+		prodsum << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+		Eigen::Vector6d vcov; // xx, xy, xz, yy, yz, zz
+
 		for(size_t i = 0; i != num_neighbors; ++i){
-			// Eigen::Vector3d p(pc->points[i].x, pc->points[i].y, pc->points[i].z);
-			// double mdist = (p - ave).transpose() * vcov.householderQr().solve(p - ave);
-			// double mdist = (p - ave).norm();
-			// double mdist = (p - ave).transpose() * inv * (p - ave);
-			// if(th < mdist){
-			// 	// cerr << "dist " << mdist << endl;
-			// }
+			Eigen::Vector3d p(neighbors.col(i));
+			double mdist = p.transpose() * inv * p;
+			if(mdist < threshold){
+				ave += p;
+				int cnt = 0;
+				for(int i = 0; i != 3; ++i){
+					for(int j = i; j != 3; ++j){
+						prodsum(cnt) += p(i) * p(j);
+						++cnt;
+					}
+				}
+				++count_extract;
+			}
 		}
+
+		if(count_extract){
+			ave /= count_extract;
+			int cnt = 0;
+			for(int i = 0; i != 3; ++i){
+				for(int j = i; j != 3; ++j){
+					vcov(cnt) = prodsum(cnt) / count_extract - ave(i)*ave(j);
+					++cnt;
+				}
+			}
+
+			mat << vcov(0), vcov(1), vcov(2),
+				   vcov(1), vcov(3), vcov(4),
+				   vcov(2), vcov(4), vcov(5);
+		}
+
+		return count_extract;
 	}
 
 	bool NormalEstimator::inverse(const Eigen::Vector6d& v, Eigen::Matrix3d& m)
@@ -187,5 +230,13 @@ namespace perfect_velodyne
 			}
 		}
 	}
+
+	size_t NormalEstimator::getIndex(const size_t& ordered)
+	{
+		size_t ringId = ordered % num_lasers; // 2^n の余りだからビットシフトのが早い??
+
+		return  ringId < 16 ? ordered + ringId : ordered + ringId - 31; // 三項演算子は遅い??
+	}
+
 } // namespace perfect_velodyne
 

@@ -16,7 +16,7 @@
 
 namespace Eigen{
 	using Vector6d = Matrix<double, 6, 1>;
-	using Vector3dArray = Matrix<double, 3, Eigen::Dynamic>;
+	using Vector3dArray = Matrix<double, 3, Dynamic>;
 }
 
 namespace perfect_velodyne
@@ -32,11 +32,11 @@ namespace perfect_velodyne
 		void normalSetter(VPointCloudPtr&); // calc normal with singular value decomposition
 
 		private:
-		size_t getIndex(const size_t&);
-		void getNeighbor(const int&, Eigen::Vector3dArray&);
-		void removeOutliers(Eigen::Vector3dArray&, const Eigen::Matrix3d&, const Eigen::Vector3d&);
+		bool getMatCov(const int&, Eigen::Matrix3d&);
+		int removeOutliers(Eigen::Vector3dArray&, Eigen::Matrix3d&);
 		bool inverse(const Eigen::Vector6d&, Eigen::Matrix3d&);
 		void showNeighbor(const int&);
+		size_t getIndex(const size_t&);
 
 		int num_vertical; // vertical num for PCA
 		int num_horizontal; // horizontal num for PCA
