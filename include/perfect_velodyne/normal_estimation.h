@@ -11,7 +11,12 @@
 #ifndef NORMAL_ESTIMATION_H
 #define NORMAL_ESTIMATION_H
 
+#include <Eigen/Core>
 #include "perfect_velodyne/point_types.h"
+
+namespace Eigen{
+	using Vector6d = Matrix<double, 6, 1>;
+}
 
 namespace perfect_velodyne
 {
@@ -31,15 +36,22 @@ namespace perfect_velodyne
 		int num_horizontal; // horizontal num for PCA
 		const int num_lasers; // HDL32e -> 32
 		bool flag_omp;
+		size_t npoints;
+		VpcNormalPtr vpc;
 
 		bool pointInRange(const VPointNormal&);
-		size_t orderIndex(const size_t&);
-		void vpoint2pcl(const VPointNormal&, Point&);
-		void vpcloud2pcl(const VpcNormalPtr&, PointCloudPtr&);
+		size_t getIndex(const size_t&);
+		// void vpoint2pcl(const VPointNormal&, Point&);
+		// void vpcloud2pcl(const VpcNormalPtr&, PointCloudPtr&);
 		// void pcl2vpoint(const Point&, VPointNormal&);
 		// void pcl2vpcloud(const PointCloudPtr&, VpcNormalPtr&);
-		PointCloudPtr getNeighbor(const PointCloudPtr&, const int&);
+		PointCloudPtr getNeighbor(const VpcNormalPtr&, const int&);
+		// PointCloudPtr getNeighbor(const PointCloudPtr&, const int&);
+		void removeOutliers(PointCloudPtr&, const Eigen::Matrix3d&, const Eigen::Vector3d&);
+		// void removeOutliers(PointCloudPtr&, const Eigen::Matrix3d&, const Eigen::Vector3d&);
+		bool inverse(const Eigen::Vector6d&, Eigen::Matrix3d&);
 		void showNeighbor(VpcNormalPtr&, const int&);
+		void showPoints(const pcl::PointIndices::Ptr&);
 
 		public:
 		NormalEstimator();

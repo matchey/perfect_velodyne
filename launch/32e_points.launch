@@ -21,7 +21,7 @@
   <arg name="laserscan_resolution" default="0.007" />
   <arg name="VN" default="1" />
   <arg name="HN" default="2" />
-  <arg name="omp" default="false" />
+  <arg name="omp" default="true" />
   <arg name="pub_org" default="true" />
 
   <!-- start nodelet manager and driver nodelets -->

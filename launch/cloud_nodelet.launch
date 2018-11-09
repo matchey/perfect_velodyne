@@ -16,7 +16,7 @@
   <param name="/perfect_velodyne/OpenMP" value="$(arg flag_omp)"/>
   <param name="/perfect_velodyne/pub_org" value="$(arg flag_org)"/>
   <node pkg="nodelet" type="nodelet" name="$(arg manager)_cloud"
-        args="load perfect_velodyne/CloudNodelet $(arg manager)">
+        args="load perfect_velodyne/CloudNodelet $(arg manager)" output="screen">
     <param name="calibration" value="$(arg calibration)"/>
     <param name="max_range" value="$(arg max_range)"/>
     <param name="min_range" value="$(arg min_range)"/>

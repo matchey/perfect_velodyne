@@ -1,13 +1,10 @@
 /*
- *  Copyright (C) 2012 Austin Robot Technology, Jack O'Quin
- *  License: Modified BSD Software License Agreement
- *
- *  $Id$
- */
+ * author: matchey
+*/
 
 /** \file
 
-    This ROS node converts raw Velodyne LIDAR packets to PointCloud2.
+    This ROS node converts raw Velodyne LIDAR packets to PointCloud2 with normal.
 
 */
 

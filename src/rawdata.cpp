@@ -43,7 +43,7 @@ namespace perfect_velodyne
 		//adding 0.5 perfomrs a centered double to int conversion 
 		config_.min_angle = 100 * (2*M_PI - config_.tmp_min_angle) * 180 / M_PI + 0.5;
 		config_.max_angle = 100 * (2*M_PI - config_.tmp_max_angle) * 180 / M_PI + 0.5;
-		if (config_.min_angle == config_.max_angle)
+		if(config_.min_angle == config_.max_angle)
 		{
 			//avoid returning empty cloud if min_angle = max_angle
 			config_.min_angle = 0;
@@ -55,7 +55,7 @@ namespace perfect_velodyne
 	int RawDataWithNormal::setup(ros::NodeHandle private_nh)
 	{
 		// get path to angles.config file for this device
-		if (!private_nh.getParam("calibration", config_.calibrationFile))
+		if(!private_nh.getParam("calibration", config_.calibrationFile))
 		{
 			ROS_ERROR_STREAM("No calibration angles specified! Using test values!");
 
@@ -67,7 +67,7 @@ namespace perfect_velodyne
 		ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
 
 		calibration_.read(config_.calibrationFile);
-		if (!calibration_.initialized) {
+		if(!calibration_.initialized){
 			ROS_ERROR_STREAM("Unable to open calibration file: " << 
 					config_.calibrationFile);
 			return -1;
@@ -76,7 +76,7 @@ namespace perfect_velodyne
 		ROS_INFO_STREAM("Number of lasers: " << calibration_.num_lasers << ".");
 
 		// Set up cached values for sin and cos of all the possible headings
-		for (uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index) {
+		for(uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index){
 			float rotation = angles::from_degrees(ROTATION_RESOLUTION * rot_index);
 			cos_rot_table_[rot_index] = cosf(rotation);
 			sin_rot_table_[rot_index] = sinf(rotation);
@@ -99,14 +99,14 @@ namespace perfect_velodyne
 		ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
 
 		calibration_.read(config_.calibrationFile);
-		if (!calibration_.initialized) {
+		if(!calibration_.initialized){
 			ROS_ERROR_STREAM("Unable to open calibration file: " <<
 					config_.calibrationFile);
 			return -1;
 		}
 
 		// Set up cached values for sin and cos of all the possible headings
-		for (uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index) {
+		for(uint16_t rot_index = 0; rot_index < ROTATION_MAX_UNITS; ++rot_index){
 			float rotation = angles::from_degrees(ROTATION_RESOLUTION * rot_index);
 			cos_rot_table_[rot_index] = cosf(rotation);
 			sin_rot_table_[rot_index] = sinf(rotation);
@@ -134,17 +134,17 @@ namespace perfect_velodyne
 
 		const raw_packet_t *raw = (const raw_packet_t *) &pkt.data[0];
 
-		for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
+		for(int i = 0; i < BLOCKS_PER_PACKET; i++){
 
 			// upper bank lasers are numbered [0..31]
 			// NOTE: this is a change from the old velodyne_common implementation
 			int bank_origin = 0;
-			if (raw->blocks[i].header == LOWER_BANK) {
+			if(raw->blocks[i].header == LOWER_BANK){
 				// lower bank lasers are [32..63]
 				bank_origin = 32;
 			}
 
-			for (int j = 0, k = 0; j < SCANS_PER_BLOCK; j++, k += RAW_SCAN_SIZE) {
+			for(int j = 0, k = 0; j < SCANS_PER_BLOCK; j++, k += RAW_SCAN_SIZE){
 
 				float x, y, z;
 				float intensity;
@@ -161,7 +161,7 @@ namespace perfect_velodyne
 				tmp.bytes[1] = raw->blocks[i].data[k+1];
 				/*condition added to avoid calculating points which are not
 				  in the interesting defined area (min_angle < area < max_angle)*/
-				if ((raw->blocks[i].rotation >= config_.min_angle 
+				if((raw->blocks[i].rotation >= config_.min_angle 
 							&& raw->blocks[i].rotation <= config_.max_angle 
 							&& config_.min_angle < config_.max_angle)
 						||(config_.min_angle > config_.max_angle 
@@ -198,15 +198,15 @@ namespace perfect_velodyne
 					float xx = xy_distance * sin_rot_angle - horiz_offset * cos_rot_angle;
 					// Calculate temporal Y, use absolute value
 					float yy = xy_distance * cos_rot_angle + horiz_offset * sin_rot_angle;
-					if (xx < 0) xx=-xx;
-					if (yy < 0) yy=-yy;
+					if(xx < 0) xx=-xx;
+					if(yy < 0) yy=-yy;
 
 					// Get 2points calibration values,Linear interpolation to get distance
 					// correction for X and Y, that means distance correction use
 					// different value at different distance
 					float distance_corr_x = 0;
 					float distance_corr_y = 0;
-					if (corrections.two_pt_correction_available) {
+					if(corrections.two_pt_correction_available){
 						distance_corr_x = 
 							(corrections.dist_correction - corrections.dist_correction_x)
 							* (xx - 2.4) / (25.04 - 2.4) 
@@ -265,10 +265,9 @@ namespace perfect_velodyne
 					intensity = (intensity < min_intensity) ? min_intensity : intensity;
 					intensity = (intensity > max_intensity) ? max_intensity : intensity;
 
-					// if (pointInRange(distance)) {
-
 					// convert polar coordinates to Euclidean XYZ
 					VPointNormal point;
+					point.range = pointInRange(distance) ? 1 : 0;
 					point.ring = corrections.laser_ring;
 					point.x = x_coord;
 					point.y = y_coord;
@@ -278,7 +277,6 @@ namespace perfect_velodyne
 					// append this point to the cloud
 					pc.points.push_back(point);
 					++pc.width;
-					// }
 				}
 			}
 		}
