@@ -15,8 +15,8 @@
 #include "perfect_velodyne/point_types.h"
 
 namespace Eigen{
-	using Vector6d = Matrix<double, 6, 1>;
-	using Vector3dArray = Matrix<double, 3, Dynamic>;
+	using Vector6f = Matrix<float, 6, 1>;
+	using Vector3fArray = Matrix<float, 3, Dynamic>;
 }
 
 namespace perfect_velodyne
@@ -25,6 +25,10 @@ namespace perfect_velodyne
 	using VPointCloud = pcl::PointCloud<VPoint>;
 	using VPointCloudPtr = VPointCloud::Ptr;
 
+	using PointT = pcl::PointXYZ;
+	using PointCloud = pcl::PointCloud<PointT>;
+	using PointCloudPtr = PointCloud::Ptr;
+
 	class NormalEstimator
 	{
 		public:
@@ -32,9 +36,9 @@ namespace perfect_velodyne
 		void normalSetter(VPointCloudPtr&); // calc normal with singular value decomposition
 
 		private:
-		bool getMatCov(const int&, Eigen::Matrix3d&);
-		int removeOutliers(Eigen::Vector3dArray&, Eigen::Matrix3d&);
-		bool inverse(const Eigen::Vector6d&, Eigen::Matrix3d&);
+		bool getNeighbors(const int&, PointCloudPtr&);
+		int removeOutliers(Eigen::Vector3fArray&, Eigen::Matrix3f&);
+		bool inverse(const Eigen::Vector6f&, Eigen::Matrix3f&);
 		void showNeighbor(const int&);
 		size_t getIndex(const size_t&);
 

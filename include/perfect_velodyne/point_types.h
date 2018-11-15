@@ -21,7 +21,7 @@ namespace perfect_velodyne
     float    intensity;                 ///< laser intensity reading
 	float   curvature;
     uint16_t ring;                      ///< laser ring number
-    int8_t range;                         ///< whether a point is in range
+    float range;                         ///< whether a point is in range
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW     // ensure proper alignment
   } EIGEN_ALIGN16;
 
@@ -44,7 +44,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(perfect_velodyne::PointXYZIRNormal,
                                   (float, normal_z, normal_z)
                                   (float, curvature, curvature)
                                   (uint16_t, ring, ring)
-                                  (int8_t, range, range))
+                                  (float, range, range))
 
 #endif // __PERFECT_VELODYNE_POINT_TYPES_H
 

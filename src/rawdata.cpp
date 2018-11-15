@@ -267,7 +267,7 @@ namespace perfect_velodyne
 
 					// convert polar coordinates to Euclidean XYZ
 					VPointNormal point;
-					point.range = pointInRange(distance) ? 1 : 0;
+					point.range = pointInRange(distance) ? distance : 0.0;
 					point.ring = corrections.laser_ring;
 					point.x = x_coord;
 					point.y = y_coord;
