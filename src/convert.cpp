@@ -57,7 +57,8 @@ namespace perfect_velodyne
 	/** @brief Callback for raw scan messages. */
 	void ConvertWithNormal::processScan(const velodyne_msgs::VelodyneScan::ConstPtr &scanMsg)
 	{
-		if (!(output_.getNumSubscribers())) // no one listening?
+		// no one listening?
+		if (!(output_.getNumSubscribers() || (flag_pub_org && output_org_.getNumSubscribers())))
 			return;                     	// avoid much work
 		// if only use /velodyne_points, launch in velodyne_pointcloud
 
