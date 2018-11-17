@@ -11,12 +11,8 @@
 //
 
 #include <ros/ros.h>
-// #include <pcl/point_types.h>
-// #include <pcl/point_cloud.h>
 #include <pcl/common/pca.h>
-#include <pcl/filters/extract_indices.h>
 #include <omp.h>
-// #include "perfect_velodyne/rawdata.h"
 #include "perfect_velodyne/normal_estimation.h"
 
 using std::cerr;
@@ -40,18 +36,15 @@ namespace perfect_velodyne
 
 		npoints = vpc->points.size();
 		
-		Eigen::Matrix3f vectors;
-		Eigen::Vector3f values;
-		float curvature, lambda_sum;
-
-#pragma omp parallel for if(flag_omp)\
-	private(vectors, values, curvature, lambda_sum) num_threads(2)
+#pragma omp parallel for if(flag_omp) num_threads(2)
 		for(size_t i = 0; i < npoints; ++i){ // omp : != to <
 			int idx = getIndex(i);
 			bool is_invalid = true;
 			if(vpc->points[idx].range){
 				PointCloudPtr neighbors(new PointCloud);
 				if(getNeighbors(i, neighbors)){
+					Eigen::Matrix3f vectors;
+					Eigen::Vector3f values;
 					pcl::PCA<PointT> pca;
 					pca.setInputCloud(neighbors);
 					values = pca.getEigenValues(); // are sorted in descending order
@@ -61,15 +54,15 @@ namespace perfect_velodyne
 											   vpc->points[idx].y,
 											   vpc->points[idx].z).dot(vectors.col(2)) < 0 ? 1 : -1;
 					vectors.col(2) *= sign;
-					lambda_sum = values(0) + values(1) + values(2);
+					float lambda_sum = values(0) + values(1) + values(2);
 					// lambda_sum = sqrt(values(0)) + sqrt(values(1)) + sqrt(values(2));
 					if(lambda_sum){
-						curvature = 3.0 * values(2) / lambda_sum;
+						float curvature = 3.0 * values(2) / lambda_sum;
+						// curvature = 3.0 * sqrt(values(2)) / lambda_sum;
 						vpc->points[idx].normal_x = vectors(0, 2);
 						vpc->points[idx].normal_y = vectors(1, 2);
 						vpc->points[idx].normal_z = vectors(2, 2);
 						vpc->points[idx].curvature = curvature;
-						// curvature = 3.0 * sqrt(values(2)) / lambda_sum;
 						is_invalid = false;
 					}
 				}
@@ -91,7 +84,12 @@ namespace perfect_velodyne
 	// private
 	bool NormalEstimator::getNeighbors(const int& ordered, PointCloudPtr& neighbors)
 	{
-		const float threshold = 0.3;
+		const float threshold = 0.9f;
+		// const float v_height = 1.3f; // Velodyne height
+		// const int ring_level = 23; // horizontal laser of hdl32e (0~32)
+
+		// const float theta_min = -0.535292f; // bottom laser's horizontal angle
+		// const float theta = -0.0232735861f; // theta_min / ring_level;
 
 		const int width = num_horizontal * num_lasers;
 		const int ringId = ordered % num_lasers;
@@ -99,106 +97,38 @@ namespace perfect_velodyne
 		const int vend = ringId < num_lasers - num_vertical ? ordered + num_vertical + 1:
 															  ordered + num_lasers - ringId + 1;
 
-		int idx_center = getIndex(ordered);
+		const int idx_center = getIndex(ordered);
+
+		const float dist_pred = vpc->points[idx_center].range;
+
+		// const float angle_center = theta * (ring_level - ringId);
+
+		// bool is_onWall = true;
+		// if(ringId < ring_level){
+		// 	is_onWall = vpc->points[idx_center].range * sin(angle_center) / v_height < threshold;
+		// }
+
 		size_t num_neighbors = 0;
 
 		for(int vert = vbegin; vert != vend; ++vert){
-			if(vert == ordered){
-				for(int horiz = vert - width; horiz <= vert + width; horiz += num_lasers){
-					int idx = getIndex((horiz + npoints) % npoints);
-					if(vpc->points[idx].range
-					&& fabs(vpc->points[idx].range - vpc->points[idx_center].range) < threshold){
-						PointT p(vpc->points[idx].x, vpc->points[idx].y, vpc->points[idx].z);
-						neighbors->points.push_back(p);
-						++num_neighbors;
-					}
-				}
-			}else{
-				const int ndistances = 2 * num_horizontal + 1;
-				Eigen::MatrixXf distances;
-				distances.resize(ndistances, ndistances);
-				int m_row = 0;
-				for(int horiz = vert - width; horiz <= vert + width; horiz += num_lasers){
-					distances.coeffRef(m_row, m_row) = 0.0;
-					int idx_row = getIndex((horiz + npoints) % npoints);
-					if(vpc->points[idx_row].range){
-						int m_col = m_row+1;
-						for(int col = horiz+num_lasers; col <= vert + width; col += num_lasers){
-							int idx_col = getIndex((col + npoints) % npoints);
-							if(vpc->points[idx_col].range){
-								float dist = fabs(vpc->points[idx_row].range
-												- vpc->points[idx_col].range);
-								distances.coeffRef(m_row, m_col) = dist;
-								distances.coeffRef(m_col, m_row) = dist;
-							}else{
-								distances.coeffRef(m_row, m_col) = 120;
-								distances.coeffRef(m_col, m_row) = 120;
-							}
-							++m_col;
-						}
-					}else{
-						int m_col = m_row+1;
-						for(int col = horiz+num_lasers; col <= vert + width; col += num_lasers){
-							distances.coeffRef(m_row, m_col) = 120;
-							distances.coeffRef(m_col, m_row) = 120;
-							++m_col;
-						}
-					}
-					++m_row;
-				}
-				std::vector<float> dist_sum(ndistances, 0);
-				for(int i = 0; i < ndistances; ++i){
-					dist_sum[i] = distances.row(i).sum();
-				}
-				float distsum_min = dist_sum[0];
-				for(int i = 1; i < ndistances; ++i){
-					if(dist_sum[i] < distsum_min){
-						distsum_min = dist_sum[i];
-					}
-				}
-				for(int i = 0; i < ndistances; ++i){
-					if(dist_sum[i] - distsum_min < threshold){
-						int horiz = (vert - width) + num_lasers * i;
-						int idx = getIndex((horiz + npoints) % npoints);
-						PointT p(vpc->points[idx].x, vpc->points[idx].y, vpc->points[idx].z);
-						neighbors->points.push_back(p);
-						++num_neighbors;
-					}
+			// float angle = theta * (ring_level - (vert % num_lasers));
+			// float dist_pred;
+			// if(is_onWall){
+			// 	dist_pred = vpc->points[idx_center].range * cos(angle_center) / cos(angle);
+			// }else{
+			// 	dist_pred = vpc->points[idx_center].range * sin(angle_center) / sin(angle);
+			// }
+			for(int horiz = vert - width; horiz <= vert + width; horiz += num_lasers){
+				int idx = getIndex((horiz + npoints) % npoints);
+				if(threshold < vpc->points[idx].range / dist_pred){
+					PointT p(vpc->points[idx].x, vpc->points[idx].y, vpc->points[idx].z);
+					neighbors->points.push_back(p);
+					++num_neighbors;
 				}
 			}
 		}
 
-		// double density = 1.0 * num_neighbors / ((vend - vbegin) * (2*num_horizontal+1));
-		// return density < 0.9 ? false : true;
-		return num_neighbors < 5 ? false : true;
-	}
-
-	int NormalEstimator::removeOutliers(Eigen::Vector3fArray& neighbors, Eigen::Matrix3f& mat)
-	{
-		return 0;
-	}
-
-	bool NormalEstimator::inverse(const Eigen::Vector6f& v, Eigen::Matrix3f& m)
-	{
-		double det = v(0)*v(3)*v(5) + 2*v(1)*v(2)*v(4)
-					- v(2)*v(2)*v(3) - v(1)*v(1)*v(5) - v(0)*v(4)*v(4);
-
-		if(det == 0){
-			// cerr << "det = 0" << endl;
-			return false;
-		}
-
-		double b = v(2)*v(4) - v(1)*v(5); // [a b c] 
-		double c = v(1)*v(4) - v(2)*v(3); // [b d e]
-		double e = v(1)*v(2) - v(0)*v(4); // [c e f]
-
-		m << v(3)*v(5) - v(4)*v(4), b, c,
-		  	 b, v(0)*v(5) - v(2)*v(2), e,
-			 c, e, v(0)*v(3) - v(1)*v(1);
-
-		m /= det;
-
-		return true;
+		return 4 < num_neighbors;
 	}
 
 	void NormalEstimator::showNeighbor(const int& ordered)
@@ -221,7 +151,7 @@ namespace perfect_velodyne
 	{
 		size_t ringId = ordered % num_lasers; // 2^n の余りだからビットシフトのが早い??
 
-		return  ringId < 16 ? ordered + ringId : ordered + ringId - 31; // 三項演算子は遅い??
+		return  ringId < 16 ? ordered + ringId : ordered + ringId - num_lasers + 1;
 	}
 
 } // namespace perfect_velodyne

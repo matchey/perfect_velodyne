@@ -14,11 +14,6 @@
 #include <Eigen/Core>
 #include "perfect_velodyne/point_types.h"
 
-namespace Eigen{
-	using Vector6f = Matrix<float, 6, 1>;
-	using Vector3fArray = Matrix<float, 3, Dynamic>;
-}
-
 namespace perfect_velodyne
 {
 	using VPoint = PointXYZIRNormal;
@@ -37,8 +32,6 @@ namespace perfect_velodyne
 
 		private:
 		bool getNeighbors(const int&, PointCloudPtr&);
-		int removeOutliers(Eigen::Vector3fArray&, Eigen::Matrix3f&);
-		bool inverse(const Eigen::Vector6f&, Eigen::Matrix3f&);
 		void showNeighbor(const int&);
 		size_t getIndex(const size_t&);
 
