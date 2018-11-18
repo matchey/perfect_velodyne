@@ -195,6 +195,7 @@ add_dependencies(normal_estimation ${${PROJECT_NAME}_EXPORTED_TARGETS})
 # add_executable(${PROJECT_NAME}_node src/perfect_velodyne_node.cpp)
 
 add_executable(normal_estimation_node src/cloud_node.cpp src/convert.cpp src/normal_estimation.cpp)
+add_executable(rm_ground src/rm_ground.cpp src/obstacles_publisher.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -226,6 +227,8 @@ target_link_libraries(normal_estimation_node perfect_velodyne_rawdata
   # ${PCL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
+
+target_link_libraries(rm_ground ${catkin_LIBRARIES})
 
 #############
 ## Install ##

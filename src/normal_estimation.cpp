@@ -50,18 +50,19 @@ namespace perfect_velodyne
 					values = pca.getEigenValues(); // are sorted in descending order
 					vectors = pca.getEigenVectors();
 
-					int sign = Eigen::Vector3f(vpc->points[idx].x,
-											   vpc->points[idx].y,
-											   vpc->points[idx].z).dot(vectors.col(2)) < 0 ? 1 : -1;
-					vectors.col(2) *= sign;
+					if(0 < Eigen::Vector3f(vpc->points[idx].x,
+										   vpc->points[idx].y,
+										   vpc->points[idx].z).dot(vectors.col(2))){
+						vectors.col(2) *= -1;
+					}
 					float lambda_sum = values(0) + values(1) + values(2);
 					// lambda_sum = sqrt(values(0)) + sqrt(values(1)) + sqrt(values(2));
 					if(lambda_sum){
 						float curvature = 3.0 * values(2) / lambda_sum;
 						// curvature = 3.0 * sqrt(values(2)) / lambda_sum;
-						vpc->points[idx].normal_x = vectors(0, 2);
-						vpc->points[idx].normal_y = vectors(1, 2);
-						vpc->points[idx].normal_z = vectors(2, 2);
+						vpc->points[idx].normal_x = vectors.coeffRef(0, 2);
+						vpc->points[idx].normal_y = vectors.coeffRef(1, 2);
+						vpc->points[idx].normal_z = vectors.coeffRef(2, 2);
 						vpc->points[idx].curvature = curvature;
 						is_invalid = false;
 					}
